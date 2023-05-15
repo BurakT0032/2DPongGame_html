@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+<title>2D Pong Game</title>
+
+<style>
+    canvas{
+    height: 75vh;
+    width: 70vw;
+    border-radius: 5%;
+    background-image: url('ponggamecourt.jpg');
+    
+    
+    }
+    body {
+    width: 100vw;
+    height: 100vh;
+    overflow-y: hidden; 
+    overflow-x: hidden; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('ponggame2.jpg');
+    
+   
+
+}
+</style>
+</head>
+<body onload="startGame()">
+<script>
+var solpaddle;
+var sagpaddle;
+var solduvar;
+var sagduvar;
+var top;
+
+function startGame() {
+  myGameArea.start();
+  solpaddle = new component(10, 30, "white", 10, 60);
+  sagpaddle = new component(10, 30, "white", 280, 60);
+  solduvar = new component (5,myGameArea.canvas.height,"white",0,0);
+  sagduvar = new component (5,myGameArea.canvas.height,"white",295,0);
+
+  ball = new Ball(4, "yellow", myGameArea.canvas.width / 2, myGameArea.canvas.height / 2); 
+  
+}
+
+        var myGameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.interval = setInterval(updateGameArea, 20);
+        window.addEventListener('keydown', function (e) {
+            myGameArea.key = e.keyCode;
+        })
+        window.addEventListener('keyup', function (e) {
+            myGameArea.key = false;
+        })
+    }, 
+    clear : function(){
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    },
+    stop : function() {
+        clearInterval(this.interval);
+    }
+}
+
+ function component(width, height, color, x, y) {
+    this.gamearea = myGameArea;
+    this.width = width;
+    this.height = height;
+    this.speedY = 0;    
+    this.x = x;
+    this.y = y;    
+    this.update = function() {
+        ctx = myGameArea.context;
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+    this.newPos = function() {
+        this.y += this.speedY;        
+    }
+}
+function updateGameArea() {
+    if (ball.crashWith(solduvar) ||ball.crashWith(sagduvar)) {
+        myGameArea.stop();
+    }
+    else{
+    myGameArea.clear();
+    solpaddle.speedY = 0;
+    sagpaddle.speedY = 0;    
+    if (myGameArea.key  &&  myGameArea.key == 38) { sagpaddle.speedY = -5; }
+    if (myGameArea.key && myGameArea.key == 40) { sagpaddle.speedY = 5; }
+    if (myGameArea.key && myGameArea.key == 87) { solpaddle.speedY = -5; }
+    if (myGameArea.key && myGameArea.key == 83) { solpaddle.speedY = 5; }
+
+    sagpaddle.newPos();    
+    sagpaddle.update();
+    solduvar.update();
+    sagduvar.update();
+    solpaddle.newPos();    
+    solpaddle.update();
+    ball.newPos();
+    ball.update();
+    }
+}
+
+
+function Ball(radius, color, x, y) {
+  this.gamearea = myGameArea;
+  this.radius = radius;
+  this.color = color;
+  this.x = x;
+  this.y = y;
+  this.speedX = 2; //topun x eks. hizini belirleme
+  this.speedY = 2; //topun y eks. hizini belirleme
+
+  this.update = function() {
+    ctx = myGameArea.context;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, 3 * Math.PI, false);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.closePath();
+  },
+  this.crashWith = function(otherobj) { // topun sag ve soldaki duvarlara carpinca durmasini saglar
+        var top_sol = ball.x - ball.radius;
+        var top_sag = ball.x + ball.radius;
+        var top_ust = ball.y - ball.radius;
+        var top_alt = ball.y + ball.radius;   
+        var otherleft = otherobj.x;
+        var otherright = otherobj.x + (otherobj.width);
+        var othertop = otherobj.y;
+        var otherbottom = otherobj.y + (otherobj.height);
+        var crash = true;
+        if ((top_alt < othertop) || (top_ust > otherbottom) || (top_sag < otherleft) || (top_sol > otherright)) {
+            crash = false;
+        }
+        return crash;
+    },
+    this.newPos = function() {
+  this.x += this.speedX;
+  this.y += this.speedY;
+
+  if (this.x - this.radius < 0) { // sol sinira carpma durumu
+    this.x = this.radius;  //topun canvas sınırlarında kalması için
+    this.speedX = -this.speedX; // sol duvardan sekmesini saglamak icin
+  }
+
+  if (this.x + this.radius > myGameArea.canvas.width) { //sag sinira carpma durumu
+    this.x = myGameArea.canvas.width - this.radius; //topun canvas sınırlarında kalması için
+    this.speedX = -this.speedX; // sag duvardan sekmesini saglamak icin
+  }
+  if (this.y - this.radius < 0) { //ust sinira carpma durumu
+    this.y = this.radius;  //topun canvas sınırlarında kalması için
+    this.speedY = -this.speedY; // ust duvardan sekmesini saglamak icin
+  }
+
+  
+  if (this.y + this.radius > myGameArea.canvas.height) { // alt sinira carpma durumu
+    this.y = myGameArea.canvas.height - this.radius;  //topun canvas sınırlarında kalması için
+    this.speedY = -this.speedY; // alt duvardan sekmesini saglamak icin
+  }
+
+  if (carpmaKontrol(ball, solpaddle)) { //paddlelara carpma durumu
+    this.x = solpaddle.x + solpaddle.width + this.radius;
+    this.speedX = Math.abs(this.speedX);
+  }
+
+  if (carpmaKontrol(ball, sagpaddle)) {
+    this.x = sagpaddle.x - this.radius;
+    this.speedX = -Math.abs(this.speedX);
+  }
+}
+
+}
+function carpmaKontrol(ball,sec_paddle) { //paddlera carpmayi ayarlama
+  var top_sol = ball.x - ball.radius;
+  var top_sag = ball.x + ball.radius;
+  var top_ust = ball.y - ball.radius;
+  var top_alt = ball.y + ball.radius;
+  var sol =sec_paddle.x;
+  var sag =sec_paddle.x +sec_paddle.width;
+  var ust =sec_paddle.y;
+  var alt =sec_paddle.y +sec_paddle.height;
+
+  return (top_ust < alt && top_alt > ust &&  top_sag > sol && top_sol < sag); //topun koord. paddle koord. icinden gecmeyecek sekilde carpmasini gerceklestirir
+}
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
